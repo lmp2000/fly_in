@@ -17,5 +17,3 @@ class Zone:
     zone_type: ZoneType = ZoneType.NORMAL
     color: str | None = None
     max_drones: int = 1
-    is_start: bool = False
-    is_end: bool = False

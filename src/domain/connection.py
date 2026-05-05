@@ -9,4 +9,3 @@ class Connection:
 
     def key(self) -> tuple[str, str]:
         return tuple(sorted((self.zone_a, self.zone_b)))
-
