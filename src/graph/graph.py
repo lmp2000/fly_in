@@ -103,3 +103,10 @@ class Graph:
             )
 
         return connection
+
+
+    def get_zone_names(self) -> list[str]:
+        result: list[str] = []
+        for zone in self.map_data.zones:
+            result.append(zone)
+        return result
