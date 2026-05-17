@@ -10,10 +10,11 @@ class Dijkstra:
     def __init__(self, graph: Graph) -> None:
         self.graph = graph
 
-    def find_path(self, start: str, end: str) -> PathResult:
+    def find_path(
+            self, zone_penalties: dict[str, float] | None = None
+    ) -> PathResult:
         try:
-            self.graph.get_zone(start)
-            self.graph.get_zone(end)
+            start, end = self.graph.get_start_end()
         except GraphError as error:
             raise PathError(
                 "Please select only zones that exist in the map"
@@ -23,6 +24,9 @@ class Dijkstra:
         for zone in self.graph.get_zone_names():
             distances[zone] = float("inf")
         distances[start] = 0
+
+        if zone_penalties is None:
+            zone_penalties = {}
 
         previous: dict[str, str | None] = {}
         for zone in self.graph.get_zone_names():
@@ -41,6 +45,9 @@ class Dijkstra:
             for neighbor in neighbors:
                 n_cost = self.graph.movement_cost(neighbor)
                 total_cost = n_cost + curr_cost
+                if neighbor in zone_penalties:
+                    penalty = zone_penalties.get(neighbor, 0)
+                    total_cost += penalty
                 if total_cost >= distances[neighbor]:
                     continue
                 distances[neighbor] = total_cost
@@ -59,6 +66,12 @@ class Dijkstra:
             curr = previous[curr]
         path.reverse()
 
-        cost = int(distances[end])
+        cost = self._calculate_real_cost(path)
 
         return PathResult(path, cost)
+
+    def _calculate_real_cost(self, path: list[str]) -> int:
+        real_cost = 0
+        for zone in path[1:]:
+            real_cost += self.graph.movement_cost(zone)
+        return real_cost

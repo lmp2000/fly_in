@@ -110,3 +110,8 @@ class Graph:
         for zone in self.map_data.zones:
             result.append(zone)
         return result
+
+    def get_start_end(self) -> tuple[str, str]:
+        return (
+            self.map_data.start_name, self.map_data.end_name
+        )
