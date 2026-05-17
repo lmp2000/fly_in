@@ -115,3 +115,6 @@ class Graph:
         return (
             self.map_data.start_name, self.map_data.end_name
         )
+
+    def get_nb_drones(self) -> int:
+        return self.map_data.nb_drones
