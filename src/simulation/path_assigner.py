@@ -1,6 +1,7 @@
 from src.graph.graph import Graph
 from src.pathfinding.path_result import PathResult
 from src.domain.connection import Connection
+from src.domain.zone import ZoneType
 
 
 class PathAssigner:
@@ -34,7 +35,8 @@ class PathAssigner:
     def _estimate_path_score(self, path_index: int, assigned_counts: dict[int, int]) -> float:
         path = self.paths[path_index]
         congestion_penalty = assigned_counts.get(path_index, 0) / self._get_path_bottleneck(path)
-        score = path.cost + congestion_penalty
+        priority_bonus = self._get_priority_bonus(path)
+        score = path.cost + congestion_penalty - priority_bonus
         return score
 
     def _get_path_bottleneck(self, path: PathResult) -> int:
@@ -64,3 +66,16 @@ class PathAssigner:
             connections.append(self.graph.get_connection(path[index - 1], path[index]))
 
         return connections
+
+    def _get_priority_bonus(self, path: PathResult) -> float:
+        count = 0
+        start_name, end_name = self.graph.get_start_end()
+
+        for z in path.zones:
+            if z == start_name or z == end_name:
+                continue
+            zone = self.graph.get_zone(z)
+            if zone.zone_type == ZoneType.PRIORITY:
+                count += 1
+
+        return count * 0.1
