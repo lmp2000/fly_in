@@ -4,11 +4,13 @@ from src.domain.zone import ZoneType
 from src.simulation.simulator_error import SimulatorError
 from src.simulation.transit_move import TransitMove
 from src.domain.connection import Connection
+from src.simulation.path_assigner import PathAssigner
+from src.pathfinding.path_result import PathResult
 
 
 class Simulator:
     def __init__(
-            self, graph: Graph, paths: list[list[str]],
+            self, graph: Graph, paths: list[PathResult],
     ) -> None:
         self.graph = graph
         self.paths = paths
@@ -22,9 +24,11 @@ class Simulator:
             )
 
         drones: list[Drone] = []
+        assigner = PathAssigner(self.graph, self.paths)
+        assigned_paths = assigner.assign()
 
         for drone_id in range(1, self.nb_drones + 1):
-            path = self.paths[(drone_id - 1) % len(self.paths)]
+            path = assigned_paths[drone_id - 1]
             drone = Drone(drone_id, path)
             drones.append(drone)
 
@@ -100,10 +104,10 @@ class Simulator:
     def _run_turn(self, drones: list[Drone]) -> str:
         moved_drones: set[int] = set()
         movements: list[str] = self._process_transits(drones, moved_drones)
-        occupancy = self._get_zone_occupancy(drones)
+        occupancy: dict[str, int] = self._get_zone_occupancy(drones)
         used_connections: dict[tuple[str, str], int] = self._get_active_connections()
 
-        for drone in drones:
+        for drone in self._get_move_order(drones):
             if drone.is_delivered():
                 continue
 
@@ -164,14 +168,9 @@ class Simulator:
             ) + 1
         return active_connections
 
-    def _count_active_connections(
-            self,
-            connection: Connection
-    ) -> int:
-        key = connection.key()
-        return sum(
-            1 for t in self.active_transits
-            if t.connection_key == key
+    def _get_move_order(self, drones: list[Drone]) -> list[Drone]:
+        return sorted(
+            drones, key=lambda d: d.path_index, reverse=True
         )
 
     def simulate(self) -> list[str]:

@@ -37,7 +37,7 @@ class PathFinder:
 
         if len(paths) == 0:
             raise PathError(
-                "There is no available paths from start to end in this map"
+                "There are no available paths from start to end in this map"
             )
 
         return paths
