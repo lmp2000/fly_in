@@ -6,7 +6,20 @@ from src.parser.metadata_parser import parse_metadata
 
 
 class MapParser:
+    """Parse Fly-in map files into validated domain objects."""
+
     def parse_file(self, file_path: str) -> MapData:
+        """Parse a map file into validated map data.
+
+        Args:
+            file_path: Path to the map file.
+
+        Returns:
+            A validated MapData instance.
+
+        Raises:
+            ParseError: If the file contents do not follow the map format.
+        """
         buffer: list[str] = []
         with open(file_path, "r") as f:
             for line in f:
@@ -14,6 +27,17 @@ class MapParser:
         return self.parse_lines(buffer)
 
     def parse_lines(self, lines: list[str]) -> MapData:
+        """Parse raw map lines into validated map data.
+
+        Args:
+            lines: Raw lines from a map file.
+
+        Returns:
+            A validated MapData instance.
+
+        Raises:
+            ParseError: If required sections or declarations are invalid.
+        """
         clean_lines: list[tuple[int, str]] = []
 
         for i, line in enumerate(lines, 1):
@@ -38,56 +62,64 @@ class MapParser:
         start_hub: str | None = None
         end_hub: str | None = None
 
-        for line in clean_lines[1:]:
-            if line[1].startswith('hub:'):
-                zone = self.parse_zone(line[0], line[1].split(':', 1)[1].strip())
+        for line_number, line in clean_lines[1:]:
+            if line.startswith('hub:'):
+                zone = self.parse_zone(
+                    line_number, line.split(':', 1)[1].strip()
+                )
                 if zone.name in zones:
                     raise ParseError(
-                        line[0], "Duplicate zone name"
+                        line_number, "Duplicate zone name"
                     )
                 zones[zone.name] = zone
-            elif line[1].startswith('start_hub:'):
+            elif line.startswith('start_hub:'):
                 if start_hub is not None:
                     raise ParseError(
-                        line[0], 'There can only be one start_hub'
+                        line_number, 'There can only be one start_hub'
                     )
-                start_zone = self.parse_zone(line[0], line[1].split(':', 1)[1].strip())
+                start_zone = self.parse_zone(
+                    line_number, line.split(':', 1)[1].strip()
+                )
                 start_hub = start_zone.name
                 if start_hub in zones:
                     raise ParseError(
-                        line[0], "Duplicate zone name"
+                        line_number, "Duplicate zone name"
                     )
                 zones[start_hub] = start_zone
-            elif line[1].startswith('end_hub:'):
+            elif line.startswith('end_hub:'):
                 if end_hub is not None:
                     raise ParseError(
-                        line[0], 'There can only be one end_hub'
+                        line_number, 'There can only be one end_hub'
                     )
-                end_zone = self.parse_zone(line[0], line[1].split(':', 1)[1].strip())
+                end_zone = self.parse_zone(
+                    line_number, line.split(':', 1)[1].strip()
+                )
                 end_hub = end_zone.name
                 if end_hub in zones:
                     raise ParseError(
-                        line[0], "Duplicate zone name"
+                        line_number, "Duplicate zone name"
                     )
                 zones[end_hub] = end_zone
-            elif line[1].startswith('connection:'):
-                connection = self.parse_connection(line[0], line[1].split(':', 1)[1].strip())
+            elif line.startswith('connection:'):
+                connection = self.parse_connection(
+                    line_number, line.split(':', 1)[1].strip()
+                )
                 if connection.zone_a not in zones:
                     raise ParseError(
-                        line[0], f"Unknown zone in {connection.zone_a}"
+                        line_number, f"Unknown zone in {connection.zone_a}"
                     )
                 if connection.zone_b not in zones:
                     raise ParseError(
-                        line[0], f"Unknown zone in {connection.zone_b}"
+                        line_number, f"Unknown zone in {connection.zone_b}"
                     )
                 if connection.key() in [c.key() for c in connections]:
                     raise ParseError(
-                        line[0], "Duplicate connections are not allowed"
+                        line_number, "Duplicate connections are not allowed"
                     )
                 connections.append(connection)
             else:
                 raise ParseError(
-                    line[0], "Unknown line type"
+                    line_number, "Unknown line type"
                 )
 
         if start_hub is None or end_hub is None:
@@ -98,6 +130,17 @@ class MapParser:
         return MapData(nb_drones, zones, connections, start_hub, end_hub)
 
     def parse_nbdrones(self, clean_lines: list[tuple[int, str]]) -> int:
+        """Parse the drone count declaration.
+
+        Args:
+            clean_lines: Non-empty cleaned map lines with original numbers.
+
+        Returns:
+            The positive number of drones declared by the map.
+
+        Raises:
+            ParseError: If the drone count is missing or invalid.
+        """
         value = clean_lines[0][1].split(':', 1)[1].strip()
 
         try:
@@ -115,6 +158,18 @@ class MapParser:
         return nb_drones
 
     def parse_zone(self, line_number: int, zone_line: str) -> Zone:
+        """Parse a zone declaration.
+
+        Args:
+            line_number: Source line number used for error reporting.
+            zone_line: Zone declaration without the leading field name.
+
+        Returns:
+            The parsed Zone object.
+
+        Raises:
+            ParseError: If the zone name, coordinates, or metadata is invalid.
+        """
         components = zone_line.split()
 
         if len(components) < 3:
@@ -186,6 +241,18 @@ class MapParser:
         return zone
 
     def parse_connection(self, line_number: int, line: str) -> Connection:
+        """Parse a connection declaration.
+
+        Args:
+            line_number: Source line number used for error reporting.
+            line: Connection declaration without the leading field name.
+
+        Returns:
+            The parsed Connection object.
+
+        Raises:
+            ParseError: If endpoints or connection metadata are invalid.
+        """
         if '-' not in line:
             raise ParseError(
                 line_number, "Invalid connection, must use '-'"

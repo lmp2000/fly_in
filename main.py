@@ -17,6 +17,11 @@ LEVEL_ORDER = {
 
 
 def parse_args() -> argparse.Namespace:
+    """Parse command-line arguments for the simulation runner.
+
+    Returns:
+        Parsed command-line arguments.
+    """
     parser = argparse.ArgumentParser(description="Run a Fly-in simulation.")
     parser.add_argument("map_path", nargs="?")
     parser.add_argument(
@@ -33,6 +38,11 @@ def parse_args() -> argparse.Namespace:
 
 
 def discover_maps() -> list[Path]:
+    """Return the available official map files sorted for display.
+
+    Returns:
+        A sorted list of map file paths.
+    """
     if not MAPS_ROOT.exists():
         return []
 
@@ -45,6 +55,14 @@ def discover_maps() -> list[Path]:
 
 
 def map_sort_key(path: Path) -> tuple[int, str, str]:
+    """Build a stable sort key for a map path.
+
+    Args:
+        path: Map file path to sort.
+
+    Returns:
+        A tuple ordered by level, level name, and relative path.
+    """
     try:
         relative = path.relative_to(MAPS_ROOT)
     except ValueError:
@@ -59,6 +77,14 @@ def map_sort_key(path: Path) -> tuple[int, str, str]:
 
 
 def format_map_label(path: Path) -> str:
+    """Format a map path for the interactive selector.
+
+    Args:
+        path: Map file path to display.
+
+    Returns:
+        A human-readable map label.
+    """
     relative = path.relative_to(MAPS_ROOT)
     level = relative.parts[0] if len(relative.parts) > 1 else "other"
     name = path.stem
@@ -66,12 +92,25 @@ def format_map_label(path: Path) -> str:
 
 
 def print_map_list(paths: list[Path]) -> None:
+    """Print the available maps with numeric choices.
+
+    Args:
+        paths: Map file paths to display.
+    """
     print("Available maps:\n")
     for index, path in enumerate(paths, 1):
         print(f"[{index}] {format_map_label(path)}")
 
 
 def choose_map_interactively(paths: list[Path]) -> Path:
+    """Prompt the user to choose one map from a list.
+
+    Args:
+        paths: Available map file paths.
+
+    Returns:
+        The selected map path.
+    """
     print_map_list(paths)
     print()
 
@@ -90,6 +129,17 @@ def choose_map_interactively(paths: list[Path]) -> Path:
 
 
 def resolve_map_path(map_path: str | None) -> Path:
+    """Resolve an optional CLI map path or prompt for one.
+
+    Args:
+        map_path: Optional map path provided on the command line.
+
+    Returns:
+        The map path to simulate.
+
+    Raises:
+        SystemExit: If no map path is provided and no official maps exist.
+    """
     if map_path is not None:
         return Path(map_path)
 
@@ -101,6 +151,11 @@ def resolve_map_path(map_path: str | None) -> Path:
 
 
 def main() -> int:
+    """Run the selected Fly-in map simulation.
+
+    Returns:
+        Process exit code.
+    """
     args = parse_args()
 
     if args.list_maps:

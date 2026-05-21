@@ -2,6 +2,18 @@ from src.parser.parse_error import ParseError
 
 
 def parse_metadata(raw_metadata: str, line_number: int) -> dict[str, str]:
+    """Parse bracketed key-value metadata from a map line.
+
+    Args:
+        raw_metadata: Raw metadata text, including square brackets.
+        line_number: Source line number used for error reporting.
+
+    Returns:
+        Metadata values keyed by name.
+
+    Raises:
+        ParseError: If the metadata syntax is invalid or duplicated.
+    """
     text = raw_metadata.strip()
     if not text or text[0] != '[' or text[-1] != ']':
         raise ParseError(line_number, 'Invalid metadata syntax')

@@ -9,15 +9,31 @@ from src.pathfinding.path_result import PathResult
 
 
 class Simulator:
+    """Simulate drone movement turns for assigned paths."""
+
     def __init__(
             self, graph: Graph, paths: list[PathResult],
     ) -> None:
+        """Create a simulator for a graph and candidate paths.
+
+        Args:
+            graph: Graph containing map topology and constraints.
+            paths: Candidate paths available for drone assignment.
+        """
         self.graph = graph
         self.paths = paths
         self.nb_drones = self.graph.get_nb_drones()
         self.active_transits: list[TransitMove] = []
 
     def _create_drones(self) -> list[Drone]:
+        """Create drones with assigned paths.
+
+        Returns:
+            Drones ready to simulate.
+
+        Raises:
+            SimulatorError: If no candidate paths were provided.
+        """
         if not self.paths:
             raise SimulatorError(
                 "Cannot simulate without paths"
@@ -35,6 +51,7 @@ class Simulator:
         return drones
 
     def _get_zone_occupancy(self, drones: list[Drone]) -> dict[str, int]:
+        """Count drones currently occupying each zone."""
         occupancy: dict[str, int] = {}
 
         for drone in drones:
@@ -54,6 +71,7 @@ class Simulator:
             zone_name: str,
             occupancy: dict[str, int]
     ) -> bool:
+        """Return whether a zone can accept another drone."""
         if zone_name == self.graph.get_start_end()[1]:
             return True
         limit = self.graph.get_zone(zone_name).max_drones
@@ -66,6 +84,7 @@ class Simulator:
             occupancy: dict[str, int],
             used_connections: dict[tuple[str, str], int]
     ) -> str | None:
+        """Try to move one drone and return its output token."""
         target = drone.next_zone()
 
         if target is None:
@@ -83,7 +102,9 @@ class Simulator:
             return None
 
         occupancy[curr] -= 1
-        used_connections[connection.key()] = used_connections.get(connection.key(), 0) + 1
+        used_connections[connection.key()] = (
+            used_connections.get(connection.key(), 0) + 1
+        )
 
         if self.graph.get_zone(target).zone_type == ZoneType.RESTRICTED:
             if target != end:
@@ -102,10 +123,13 @@ class Simulator:
         return f"D{drone.id}-{target}"
 
     def _run_turn(self, drones: list[Drone]) -> str:
+        """Run one simulation turn and return its output line."""
         moved_drones: set[int] = set()
         movements: list[str] = self._process_transits(drones, moved_drones)
         occupancy: dict[str, int] = self._get_zone_occupancy(drones)
-        used_connections: dict[tuple[str, str], int] = self._get_active_connections()
+        used_connections: dict[tuple[str, str], int] = (
+            self._get_active_connections()
+        )
 
         for drone in self._get_move_order(drones):
             if drone.is_delivered():
@@ -124,13 +148,19 @@ class Simulator:
         return " ".join(movements)
 
     def _get_transit(self, drone: Drone) -> TransitMove | None:
+        """Return the active transit for a drone, if present."""
         lookup_id = drone.id
         for t in self.active_transits:
             if lookup_id == t.drone_id:
                 return t
         return None
 
-    def _process_transits(self, drones: list[Drone], moved_drones: set[int]) -> list[str]:
+    def _process_transits(
+            self,
+            drones: list[Drone],
+            moved_drones: set[int]
+    ) -> list[str]:
+        """Advance active restricted-zone transits."""
         movements: list[str] = []
         remaining_transits: list[TransitMove] = []
 
@@ -156,24 +186,35 @@ class Simulator:
             connection: Connection,
             used_connections: dict[tuple[str, str], int],
     ) -> bool:
+        """Return whether a connection can be used this turn."""
         key = connection.key()
         used = used_connections.get(key, 0)
         return used < connection.max_link_capacity
 
     def _get_active_connections(self) -> dict[tuple[str, str], int]:
+        """Count connections currently occupied by active transits."""
         active_connections: dict[tuple[str, str], int] = {}
         for transit in self.active_transits:
-            active_connections[transit.connection_key] = active_connections.get(
-                transit.connection_key, 0
-            ) + 1
+            key = transit.connection_key
+            connection_count = active_connections.get(key, 0)
+            active_connections[transit.connection_key] = connection_count + 1
         return active_connections
 
     def _get_move_order(self, drones: list[Drone]) -> list[Drone]:
+        """Return drones ordered for movement attempts."""
         return sorted(
             drones, key=lambda d: d.path_index, reverse=True
         )
 
     def simulate(self) -> list[str]:
+        """Run the simulation until all drones reach the destination.
+
+        Returns:
+            Output lines, one per turn with at least one movement.
+
+        Raises:
+            SimulatorError: If the simulation cannot make progress.
+        """
         drones = self._create_drones()
         turns: list[str] = []
         max_retries = 500

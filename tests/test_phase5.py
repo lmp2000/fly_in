@@ -14,13 +14,12 @@ def main() -> None:
     graph = Graph(map_data)
     path_finder = PathFinder(graph)
     path_results = path_finder.find_candidate_paths(max_paths=2)
-    paths = [result.zones for result in path_results]
 
     print("Discovered paths:")
-    for path in paths:
-        print(path)
+    for path_result in path_results:
+        print(path_result.zones)
 
-    simulator = Simulator(graph, paths)
+    simulator = Simulator(graph, path_results)
     turns = simulator.simulate()
 
     print("\nSimulation output:")

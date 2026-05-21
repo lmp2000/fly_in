@@ -7,12 +7,30 @@ from src.pathfinding.path_error import PathError
 
 
 class Dijkstra:
+    """Find the lowest-cost route through the graph."""
+
     def __init__(self, graph: Graph) -> None:
+        """Create a path finder for a graph.
+
+        Args:
+            graph: Graph used for zone and movement-cost lookups.
+        """
         self.graph = graph
 
     def find_path(
             self, zone_penalties: dict[str, float] | None = None
     ) -> PathResult:
+        """Find the lowest-cost path from start hub to end hub.
+
+        Args:
+            zone_penalties: Optional extra costs applied to named zones.
+
+        Returns:
+            The selected path and its real movement cost.
+
+        Raises:
+            PathError: If the graph endpoints are invalid or unreachable.
+        """
         try:
             start, end = self.graph.get_start_end()
         except GraphError as error:
@@ -71,6 +89,7 @@ class Dijkstra:
         return PathResult(path, cost)
 
     def _calculate_real_cost(self, path: list[str]) -> int:
+        """Calculate the real movement cost for a path."""
         real_cost = 0
         for zone in path[1:]:
             real_cost += self.graph.movement_cost(zone)

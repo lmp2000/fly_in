@@ -52,3 +52,6 @@ clean:
 	rm -rf __pycache__ .mypy_cache .pytest_cache
 	find . -type d -name "__pycache__" -exec rm -rf {} + 2>/dev/null || true
 	find . -name "*.pyc" -delete
+
+test: install
+	$(VENV_PY) -m tests.test_phase6

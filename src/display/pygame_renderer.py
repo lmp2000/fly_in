@@ -24,10 +24,14 @@ BLOCKED_COLOR = (85, 90, 100)
 
 
 class PygameUnavailableError(RuntimeError):
+    """Raised when pygame is required but not installed."""
+
     pass
 
 
 class PygameRenderer:
+    """Replay simulation turns in a pygame window."""
+
     def __init__(
             self,
             map_data: MapData,
@@ -36,6 +40,18 @@ class PygameRenderer:
             height: int = 700,
             turn_delay_ms: int = 800,
     ) -> None:
+        """Create a pygame renderer for a completed simulation.
+
+        Args:
+            map_data: Parsed map definition to draw.
+            turns: Simulation output lines to replay.
+            width: Window width in pixels.
+            height: Window height in pixels.
+            turn_delay_ms: Delay between rendered turns.
+
+        Raises:
+            PygameUnavailableError: If pygame is not installed.
+        """
         try:
             import pygame
         except ModuleNotFoundError as exc:
@@ -69,6 +85,7 @@ class PygameRenderer:
         )
 
     def run(self) -> None:
+        """Open the renderer window and replay all simulation turns."""
         current_turn = 0
         if not self._draw_and_wait(current_turn):
             self.pygame.quit()
@@ -85,6 +102,7 @@ class PygameRenderer:
         self.pygame.quit()
 
     def _scale_zone_positions(self) -> dict[str, tuple[int, int]]:
+        """Scale map coordinates into screen positions."""
         zones = list(self.map_data.zones.values())
         min_x = min(zone.x for zone in zones)
         max_x = max(zone.x for zone in zones)
@@ -118,6 +136,7 @@ class PygameRenderer:
         return positions
 
     def _apply_turn(self, turn: str) -> None:
+        """Apply one textual simulation turn to drone positions."""
         for token in turn.split():
             parts = token.split("-")
             if len(parts) < 2 or not parts[0].startswith("D"):
@@ -134,10 +153,12 @@ class PygameRenderer:
             self.positions[drone_id] = parts[-1]
 
     def _draw_and_wait(self, current_turn: int) -> bool:
+        """Draw the current state and wait for the turn delay."""
         self._draw(current_turn)
         return self._wait(self.turn_delay_ms)
 
     def _wait_until_closed(self, current_turn: int) -> None:
+        """Keep drawing the final state until the window closes."""
         running = True
         while running:
             running = self._handle_events()
@@ -145,6 +166,7 @@ class PygameRenderer:
             self.clock.tick(30)
 
     def _wait(self, delay_ms: int) -> bool:
+        """Wait for a duration while processing window events."""
         elapsed = 0
         while elapsed < delay_ms:
             if not self._handle_events():
@@ -153,12 +175,14 @@ class PygameRenderer:
         return True
 
     def _handle_events(self) -> bool:
+        """Process window events and report whether to keep running."""
         for event in self.pygame.event.get():
             if event.type == self.pygame.QUIT:
                 return False
         return True
 
     def _draw(self, current_turn: int) -> None:
+        """Draw the full renderer scene for a turn."""
         self.screen.fill(BACKGROUND_COLOR)
         self._draw_connections()
         self._draw_zones()
@@ -167,6 +191,7 @@ class PygameRenderer:
         self.pygame.display.flip()
 
     def _draw_connections(self) -> None:
+        """Draw all map connections."""
         for connection in self.map_data.connections:
             start = self.zone_positions[connection.zone_a]
             end = self.zone_positions[connection.zone_b]
@@ -179,6 +204,7 @@ class PygameRenderer:
             )
 
     def _draw_zones(self) -> None:
+        """Draw all zones and their labels."""
         for zone_name, position in self.zone_positions.items():
             zone = self.map_data.zones[zone_name]
             color = self._zone_color(zone_name)
@@ -211,6 +237,7 @@ class PygameRenderer:
             self.screen.blit(label, label_rect)
 
     def _zone_color(self, zone_name: str) -> tuple[int, int, int]:
+        """Return the display color for a zone."""
         if zone_name == self.map_data.start_name:
             return START_COLOR
         if zone_name == self.map_data.end_name:
@@ -228,6 +255,7 @@ class PygameRenderer:
                 return NORMAL_COLOR
 
     def _zone_type_label(self, zone_name: str) -> str:
+        """Return the label shown inside a zone."""
         if zone_name == self.map_data.start_name:
             return "START"
         if zone_name == self.map_data.end_name:
@@ -245,6 +273,7 @@ class PygameRenderer:
                 return ""
 
     def _draw_drones(self) -> None:
+        """Draw drone icons at their current zones."""
         visible_by_zone: dict[str, list[int]] = {}
         for drone_id, zone_name in self.positions.items():
             if zone_name not in self.zone_positions:
@@ -271,6 +300,7 @@ class PygameRenderer:
                 self.screen.blit(label, label_rect)
 
     def _draw_turn_number(self, current_turn: int) -> None:
+        """Draw the current turn number."""
         text = self.font.render(
             f"Turn {current_turn}",
             True,
