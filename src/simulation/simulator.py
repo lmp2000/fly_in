@@ -113,7 +113,7 @@ class Simulator:
             c_key = connection.key()
             transit = TransitMove(drone.id, curr, target, c_key, 1)
             self.active_transits.append(transit)
-            return f"D{drone.id}-{c_key[0]}-{c_key[1]}"
+            return f"D{drone.id}-{curr}-{target}"
 
         if target != end:
             occupancy[target] = occupancy.get(target, 0) + 1

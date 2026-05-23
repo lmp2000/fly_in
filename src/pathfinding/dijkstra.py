@@ -4,6 +4,7 @@ from src.graph.graph import Graph
 from src.graph.graph_error import GraphError
 from src.pathfinding.path_result import PathResult
 from src.pathfinding.path_error import PathError
+from src.domain.zone import ZoneType
 
 
 class Dijkstra:
@@ -43,6 +44,11 @@ class Dijkstra:
             distances[zone] = float("inf")
         distances[start] = 0
 
+        priority_counts: dict[str, int] = {}
+        for zone in self.graph.get_zone_names():
+            priority_counts[zone] = -1
+        priority_counts[start] = 0
+
         if zone_penalties is None:
             zone_penalties = {}
 
@@ -50,11 +56,14 @@ class Dijkstra:
         for zone in self.graph.get_zone_names():
             previous[zone] = None
 
-        priority_queue: list[tuple[float, str]] = []
-        heapq.heappush(priority_queue, (0, start))
+        priority_queue: list[tuple[float, int, str]] = []
+        heapq.heappush(priority_queue, (0, 0, start))
 
         while priority_queue:
-            curr_cost, curr_name = heapq.heappop(priority_queue)
+            curr_cost, neg_priority_count, curr_name = heapq.heappop(
+                priority_queue
+            )
+            curr_priority_count = -neg_priority_count
             if curr_cost > distances[curr_name]:
                 continue
             if curr_name == end:
@@ -66,11 +75,28 @@ class Dijkstra:
                 if neighbor in zone_penalties:
                     penalty = zone_penalties.get(neighbor, 0)
                     total_cost += penalty
-                if total_cost >= distances[neighbor]:
+                new_priority_count = curr_priority_count
+                if (
+                    self.graph.get_zone(neighbor).zone_type
+                    == ZoneType.PRIORITY
+                ):
+                    new_priority_count += 1
+
+                is_better_cost = total_cost < distances[neighbor]
+                is_same_cost_better_priority = (
+                    total_cost == distances[neighbor]
+                    and new_priority_count > priority_counts[neighbor]
+                )
+                if not is_better_cost and not is_same_cost_better_priority:
                     continue
+
                 distances[neighbor] = total_cost
+                priority_counts[neighbor] = new_priority_count
                 previous[neighbor] = curr_name
-                heapq.heappush(priority_queue, (total_cost, neighbor))
+                heapq.heappush(
+                    priority_queue,
+                    (total_cost, -new_priority_count, neighbor)
+                )
 
         if distances[end] == float("inf"):
             raise PathError(

@@ -41,10 +41,8 @@ class MapParser:
         clean_lines: list[tuple[int, str]] = []
 
         for i, line in enumerate(lines, 1):
-            line = line.strip()
+            line = line.split('#', 1)[0].strip()
             if not line:
-                continue
-            if line.startswith('#'):
                 continue
             clean_lines.append((i, line))
 

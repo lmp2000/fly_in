@@ -1,10 +1,14 @@
 import argparse
 from pathlib import Path
 
+from src.graph.graph_error import GraphError
 from src.graph.graph import Graph
 from src.parser.map_parser import MapParser
+from src.parser.parse_error import ParseError
 from src.pathfinding.path_finder import PathFinder
+from src.pathfinding.path_error import PathError
 from src.simulation.simulator import Simulator
+from src.simulation.simulator_error import SimulatorError
 
 
 MAPS_ROOT = Path("maps/maps_42")
@@ -166,33 +170,45 @@ def main() -> int:
         print_map_list(paths)
         return 0
 
-    map_path = resolve_map_path(args.map_path)
+    try:
+        map_path = resolve_map_path(args.map_path)
 
-    parser = MapParser()
-    map_data = parser.parse_file(str(map_path))
+        parser = MapParser()
+        map_data = parser.parse_file(str(map_path))
 
-    graph = Graph(map_data)
-    path_finder = PathFinder(graph)
-    max_paths = min(graph.get_nb_drones(), 10)
-    path_results = path_finder.find_candidate_paths(max_paths=max_paths)
+        graph = Graph(map_data)
+        path_finder = PathFinder(graph)
+        max_paths = min(graph.get_nb_drones(), 10)
+        path_results = path_finder.find_candidate_paths(max_paths=max_paths)
 
-    simulator = Simulator(graph, path_results)
-    turns = simulator.simulate()
+        simulator = Simulator(graph, path_results)
+        turns = simulator.simulate()
 
-    for turn in turns:
-        print(turn)
+        for turn in turns:
+            print(turn)
 
-    if args.visual:
-        from src.display.pygame_renderer import (
-            PygameRenderer,
-            PygameUnavailableError,
-        )
+        if args.visual:
+            from src.display.pygame_renderer import (
+                PygameRenderer,
+                PygameUnavailableError,
+            )
 
-        try:
-            renderer = PygameRenderer(map_data, turns)
-            renderer.run()
-        except PygameUnavailableError as exc:
-            print(exc)
+            try:
+                renderer = PygameRenderer(map_data, turns)
+                renderer.run()
+            except PygameUnavailableError as exc:
+                print(exc)
+    except OSError as exc:
+        path = exc.filename or args.map_path or "unknown"
+        cause = exc.strerror or str(exc)
+        print(f"Error: could not read file '{path}': {cause}")
+        return 1
+    except ParseError as exc:
+        print(f"Error: line {exc.line_number}: {exc.message}")
+        return 1
+    except (GraphError, PathError, SimulatorError) as exc:
+        print(f"Error: {exc}")
+        return 1
 
     return 0
 

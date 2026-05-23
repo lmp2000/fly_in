@@ -23,10 +23,12 @@ class Graph:
         self._add_connections()
 
     def _init_adjacency_list(self) -> None:
+        """Create one empty adjacency entry for every parsed zone."""
         for zone in self.map_data.zones.values():
             self.adjacency_list[zone.name] = []
 
     def _add_connections(self) -> None:
+        """Populate adjacency entries from bidirectional connections."""
         for connection in self.map_data.connections:
             self.adjacency_list[connection.zone_a].append(
                 connection.zone_b

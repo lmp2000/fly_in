@@ -238,12 +238,16 @@ class PygameRenderer:
 
     def _zone_color(self, zone_name: str) -> tuple[int, int, int]:
         """Return the display color for a zone."""
+        zone = self.map_data.zones[zone_name]
+        metadata_color = self._metadata_color(zone.color)
+        if metadata_color is not None:
+            return metadata_color
+
         if zone_name == self.map_data.start_name:
             return START_COLOR
         if zone_name == self.map_data.end_name:
             return END_COLOR
 
-        zone = self.map_data.zones[zone_name]
         match zone.zone_type:
             case ZoneType.PRIORITY:
                 return PRIORITY_COLOR
@@ -253,6 +257,21 @@ class PygameRenderer:
                 return BLOCKED_COLOR
             case _:
                 return NORMAL_COLOR
+
+    def _metadata_color(
+            self,
+            color_name: str | None,
+    ) -> tuple[int, int, int] | None:
+        """Return a pygame RGB color for valid color metadata."""
+        if color_name is None:
+            return None
+
+        try:
+            color = self.pygame.Color(color_name)
+        except ValueError:
+            return None
+
+        return (color.r, color.g, color.b)
 
     def _zone_type_label(self, zone_name: str) -> str:
         """Return the label shown inside a zone."""
