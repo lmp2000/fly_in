@@ -147,8 +147,8 @@ General references used for this project:
 
 ### AI Usage
 
-AI was used as a support tool for documentation help and README drafting. It was not
-used as a replacement for understanding the project logic. The code, algorithm choices,
+AI was used as a support tool for documentation help and README drafting, as well as tests elaboration. 
+It was not used as a replacement for understanding the project logic. The code, algorithm choices,
 testing, and final behavior remain the responsibility of the student.
 
 ## Tests
