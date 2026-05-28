@@ -5,6 +5,33 @@ from src.parser.parse_error import ParseError
 from src.parser.metadata_parser import parse_metadata
 
 
+def parse_positive_integer(
+    value: str,
+    line_number: int,
+    error_message: str,
+) -> int:
+    """Parse a digits-only positive integer token."""
+    if not value.isdigit():
+        raise ParseError(line_number, error_message)
+
+    parsed_value = int(value)
+    if parsed_value < 1:
+        raise ParseError(line_number, error_message)
+    return parsed_value
+
+
+def parse_integer(value: str, line_number: int, error_message: str) -> int:
+    """Parse a strict integer token, allowing a leading minus sign."""
+    if value.startswith("-"):
+        digits = value[1:]
+    else:
+        digits = value
+
+    if not digits or not digits.isdigit():
+        raise ParseError(line_number, error_message)
+    return int(value)
+
+
 class MapParser:
     """Parse Fly-in map files into validated domain objects."""
 
@@ -61,6 +88,14 @@ class MapParser:
         end_hub: str | None = None
 
         for line_number, line in clean_lines[1:]:
+            if line.startswith('nb_drones:'):
+                raise ParseError(
+                    line_number, "Duplicate nb_drones declaration"
+                )
+            if line.startswith(('hub::', 'start_hub::', 'end_hub::')):
+                raise ParseError(
+                    line_number, "Malformed line prefix"
+                )
             if line.startswith('hub:'):
                 zone = self.parse_zone(
                     line_number, line.split(':', 1)[1].strip()
@@ -121,8 +156,14 @@ class MapParser:
                 )
 
         if start_hub is None or end_hub is None:
+            missing = []
+            if start_hub is None:
+                missing.append("start_hub")
+            if end_hub is None:
+                missing.append("end_hub")
             raise ParseError(
-                0, "Map data must contain a start hub and an end hub"
+                clean_lines[-1][0],
+                f"Missing required {' and '.join(missing)} declaration",
             )
 
         return MapData(nb_drones, zones, connections, start_hub, end_hub)
@@ -141,19 +182,11 @@ class MapParser:
         """
         value = clean_lines[0][1].split(':', 1)[1].strip()
 
-        try:
-            nb_drones = int(value)
-        except ValueError:
-            raise ParseError(
-                clean_lines[0][0], "Error parsing number of drones"
-            )
-
-        if nb_drones <= 0:
-            raise ParseError(
-                clean_lines[0][0], "Number of drones must be a positive number"
-            )
-
-        return nb_drones
+        return parse_positive_integer(
+            value,
+            clean_lines[0][0],
+            "Number of drones must be a positive integer",
+        )
 
     def parse_zone(self, line_number: int, zone_line: str) -> Zone:
         """Parse a zone declaration.
@@ -181,13 +214,12 @@ class MapParser:
             raise ParseError(
                 line_number, 'Invalid zone name - cannot contain "-" or spaces'
             )
-        try:
-            x = int(x_text)
-            y = int(y_text)
-        except ValueError:
-            raise ParseError(
-                line_number, "Coordinates must be valid integers"
-            )
+        x = parse_integer(
+            x_text, line_number, "Coordinates must be valid integers"
+        )
+        y = parse_integer(
+            y_text, line_number, "Coordinates must be valid integers"
+        )
 
         zone = Zone(
             name,
@@ -215,16 +247,11 @@ class MapParser:
                 color = value
             elif key == 'max_drones':
                 max_drones_text = value
-                try:
-                    max_drones = int(max_drones_text)
-                except ValueError:
-                    raise ParseError(
-                        line_number, "Max drones must be a positive integer"
-                    )
-                if max_drones < 1:
-                    raise ParseError(
-                        line_number, "Max drones must be a positive integer"
-                    )
+                max_drones = parse_positive_integer(
+                    max_drones_text,
+                    line_number,
+                    "Max drones must be a positive integer",
+                )
             else:
                 raise ParseError(
                     line_number, "Invalid zone metadata"
@@ -277,6 +304,10 @@ class MapParser:
             raise ParseError(
                 line_number, "Invalid zone b"
             )
+        if a == b:
+            raise ParseError(
+                line_number, "Self-connection is not allowed"
+            )
 
         connection = Connection(a, b)
 
@@ -287,16 +318,11 @@ class MapParser:
 
         for key, value in metadata.items():
             if key == 'max_link_capacity':
-                try:
-                    capacity = int(value)
-                except ValueError:
-                    raise ParseError(
-                        line_number, "Max link capacity must be an integer"
-                    )
-                if capacity < 1:
-                    raise ParseError(
-                        line_number, "Max link capacity must be bigger than 0"
-                    )
+                capacity = parse_positive_integer(
+                    value,
+                    line_number,
+                    "Max link capacity must be a positive integer",
+                )
                 connection.max_link_capacity = capacity
             else:
                 raise ParseError(
