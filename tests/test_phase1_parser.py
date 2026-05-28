@@ -1,11 +1,12 @@
 import pytest
 
 from src.domain.zone import ZoneType
+from src.domain.map_data import MapData
 from src.parser.map_parser import MapParser
 from src.parser.parse_error import ParseError
 
 
-def parse_map(text: str):
+def parse_map(text: str) -> MapData:
     parser = MapParser()
     return parser.parse_lines(text.strip("\n").splitlines())
 
@@ -14,10 +15,11 @@ def assert_parse_error(text: str, message: str) -> ParseError:
     with pytest.raises(ParseError) as exc_info:
         parse_map(text)
     assert message in exc_info.value.message
-    return exc_info.value
+    error: ParseError = exc_info.value
+    return error
 
 
-def test_valid_minimal_map():
+def test_valid_minimal_map() -> None:
     map_data = parse_map(
         """
 nb_drones: 1
@@ -34,7 +36,7 @@ connection: start-end
     assert len(map_data.connections) == 1
 
 
-def test_valid_comments_and_blank_lines():
+def test_valid_comments_and_blank_lines() -> None:
     map_data = parse_map(
         """
 # ignored comment
@@ -54,7 +56,7 @@ connection: start-end
     assert len(map_data.connections) == 1
 
 
-def test_valid_metadata_in_different_orders():
+def test_valid_metadata_in_different_orders() -> None:
     map_data = parse_map(
         """
 nb_drones: 3
@@ -73,7 +75,7 @@ connection: start-end [max_link_capacity=2]
     assert map_data.connections[0].max_link_capacity == 2
 
 
-def test_valid_arbitrary_single_word_colors():
+def test_valid_arbitrary_single_word_colors() -> None:
     map_data = parse_map(
         """
 nb_drones: 1
@@ -87,7 +89,7 @@ connection: start-end
     assert map_data.zones["end"].color == "brand_42"
 
 
-def test_valid_negative_coordinates_preserve_existing_behavior():
+def test_valid_negative_coordinates_preserve_existing_behavior() -> None:
     map_data = parse_map(
         """
 nb_drones: 1
@@ -101,7 +103,7 @@ connection: start-end
     assert map_data.zones["end"].y == -2
 
 
-def test_reject_self_connection():
+def test_reject_self_connection() -> None:
     error = assert_parse_error(
         """
 nb_drones: 1
@@ -115,7 +117,7 @@ connection: start-start
     assert error.line_number == 4
 
 
-def test_reject_underscore_nb_drones():
+def test_reject_underscore_nb_drones() -> None:
     error = assert_parse_error(
         """
 nb_drones: 1_000
@@ -129,7 +131,7 @@ connection: start-end
     assert error.line_number == 1
 
 
-def test_reject_underscore_coordinates():
+def test_reject_underscore_coordinates() -> None:
     error = assert_parse_error(
         """
 nb_drones: 1
@@ -143,7 +145,7 @@ connection: start-end
     assert error.line_number == 3
 
 
-def test_reject_underscore_max_drones():
+def test_reject_underscore_max_drones() -> None:
     error = assert_parse_error(
         """
 nb_drones: 1
@@ -157,7 +159,7 @@ connection: start-end
     assert error.line_number == 2
 
 
-def test_reject_underscore_max_link_capacity():
+def test_reject_underscore_max_link_capacity() -> None:
     error = assert_parse_error(
         """
 nb_drones: 1
@@ -171,7 +173,7 @@ connection: start-end [max_link_capacity=1_000]
     assert error.line_number == 4
 
 
-def test_reject_duplicate_nb_drones_with_specific_error():
+def test_reject_duplicate_nb_drones_with_specific_error() -> None:
     error = assert_parse_error(
         """
 nb_drones: 1
@@ -186,7 +188,7 @@ connection: start-end
     assert error.line_number == 2
 
 
-def test_reject_missing_start_hub_with_specific_error():
+def test_reject_missing_start_hub_with_specific_error() -> None:
     error = assert_parse_error(
         """
 nb_drones: 1
@@ -200,7 +202,7 @@ connection: mid-end
     assert error.line_number == 4
 
 
-def test_reject_missing_end_hub_with_specific_error():
+def test_reject_missing_end_hub_with_specific_error() -> None:
     error = assert_parse_error(
         """
 nb_drones: 1
@@ -214,7 +216,7 @@ connection: start-mid
     assert error.line_number == 4
 
 
-def test_reject_malformed_prefix_like_double_colon():
+def test_reject_malformed_prefix_like_double_colon() -> None:
     error = assert_parse_error(
         """
 nb_drones: 1

@@ -66,6 +66,38 @@ Run the benchmark tests:
 make test
 ```
 
+## Example Input and Expected Output
+
+Example map:
+
+```txt
+nb_drones: 2
+
+start_hub: hub 0 0
+end_hub: goal 2 0
+hub: a 1 0
+
+connection: hub-a
+connection: a-goal
+```
+
+Save the map in a text file, then run:
+
+```sh
+python3 main.py example_map.txt
+```
+
+Expected output:
+
+```txt
+D1-a
+D1-goal D2-a
+D2-goal
+```
+
+This small example is deterministic. On larger maps, output may vary depending
+on path assignment and turn scheduling while still respecting the same rules.
+
 ## Algorithm and Implementation Strategy
 
 The map is parsed into object-oriented domain classes for zones, connections, and map
